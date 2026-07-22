@@ -1,0 +1,14 @@
+{
+  "name": "githubro-extensions",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "typebox": "^1.0.55"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "latest",
+    "@types/node": "^22.15.3",
+    "typescript": "^5.8.3"
+  }
+}
