@@ -45,10 +45,8 @@ tokens.
 - Linux host with Docker
 - GitHub Personal Access Token with `repo` permissions
 - Model-provider credentials supported by pi
-- The following labels in every watched repository:
-  - `agent`
-  - `agent-in-progress`
-  - `agent-done`
+- Permission for the PAT to create labels. On startup, GithuBro idempotently
+  creates `agent`, `agent-in-progress`, and `agent-done` when they are missing.
 
 ## Quickstart
 
@@ -203,9 +201,9 @@ For an existing installation, use `git status` before pulling. Preserve local
 changes and the existing `.env`; never reset or discard them automatically.
 Update with `git pull --ff-only` only when the worktree is safe.
 
-Ensure the workflow labels exist in every configured repository. If the GitHub
-CLI is available on the host, create missing labels with authenticated `gh`
-commands (otherwise perform this step through `gh` inside the built container):
+GithuBro automatically creates missing workflow labels in every configured
+repository during startup. The equivalent manual commands are shown below for
+troubleshooting or installations whose PAT cannot create labels:
 
 ```bash
 gh label create agent --repo owner/repository --color FBCA04 \
@@ -216,8 +214,9 @@ gh label create agent-done --repo owner/repository --color 0E8A16 \
   --description "githubro completed this issue"
 ```
 
-Skip labels that already exist. Label creation is part of installation, but the
-agent should report which repositories it changed.
+Existing labels are preserved. During verification, the installing agent should
+confirm that automatic provisioning succeeded and report which labels GithuBro
+created.
 
 ### 5. Deploy
 

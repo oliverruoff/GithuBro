@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 
 from app.config import Config
 from app.github.client import GitHubClient
+from app.github.labels import ensure_workflow_labels
 from app.log import configure_logging
 from app.runner.cleanup import cleanup
 from app.runner.llm import run_llm
@@ -55,6 +56,22 @@ def main() -> None:
         raise SystemExit(2) from exc
     configure_logging(config.log_level)
     client = GitHubClient(config.github_pat)
+    try:
+        created = ensure_workflow_labels(
+            client,
+            config.repos,
+            trigger=config.trigger_label,
+            in_progress=config.in_progress_label,
+            done=config.done_label,
+        )
+    except Exception as exc:
+        log.error("workflow label provisioning failed: %s", exc, exc_info=True)
+        raise SystemExit(3) from exc
+    for repo, labels in created.items():
+        if labels:
+            log.info("created missing workflow labels: %s", ", ".join(labels), extra={"repo": repo})
+        else:
+            log.info("workflow labels ready", extra={"repo": repo})
     while True:
         delay = seconds_until_next_tick(config)
         log.info("next tick in %.1f seconds", delay)
