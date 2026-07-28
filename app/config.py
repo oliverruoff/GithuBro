@@ -39,8 +39,8 @@ class Config:
         repos = tuple(x.strip() for x in os.getenv("GITHUB_REPOS", "").split(",") if x.strip())
         if not pat:
             raise ValueError("GITHUB_PAT is required")
-        if not repos:
-            raise ValueError("GITHUB_REPOS must contain at least one owner/repo")
+        # GITHUB_REPOS may be unset or empty; when empty, the worker resolves
+        # every repository owned by the configured username via `gh repo list`.
         if any(repo.count("/") != 1 or not all(repo.split("/")) for repo in repos):
             raise ValueError("GITHUB_REPOS entries must use owner/repo format")
         effort = os.getenv("BRO_REASONING_EFFORT", "medium").lower()
