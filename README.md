@@ -131,7 +131,7 @@ that could not be determined safely:
 |---|---|---|
 | Target host | Hostname/IP and SSH username; ask for an authentication method if no working session exists | From the user's server or home-network configuration |
 | `GITHUB_PAT` | A GitHub PAT with access to every watched repository and permission to read/write issues, labels, branches, and pull requests | GitHub → Settings → Developer settings → Personal access tokens. The user must create/copy it; the agent must not expose it |
-| `GITHUB_REPOS` | Exact comma-separated `owner/repo` entries to watch | From the URLs of the desired GitHub repositories |
+| `GITHUB_REPOS` | Optional. Exact comma-separated `owner/repo` entries to watch. Leave empty to watch every repository owned by `GITHUB_USERNAME`. | From the URLs of the desired GitHub repositories |
 | `GITHUB_USERNAME` | GitHub handle that should receive issue mentions | The user's GitHub profile/login |
 | Provider/model | Which pi provider and model to use, or whether an existing pi configuration should be reused | From the user's existing pi setup or the chosen provider's model documentation |
 | Provider credential | The environment variable and API key required by that provider, for example `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `MINIMAX_API_KEY` | The provider's API-key/account console |
@@ -140,8 +140,9 @@ that could not be determined safely:
 The agent may reuse values from an authorized existing environment file, such as
 another pi installation, by copying only the required keys. It must tell the
 user which **variable names** it plans to reuse, never their values. At minimum,
-GithuBro requires `GITHUB_PAT` and `GITHUB_REPOS`; a usable deployment also needs
-`PI_ARGS` plus the selected provider's credential.
+GithuBro requires `GITHUB_PAT`; `GITHUB_REPOS` is optional and defaults to every
+repository owned by `GITHUB_USERNAME`. A usable deployment also needs `PI_ARGS`
+plus the selected provider's credential.
 
 If the user has no PAT or provider key yet, pause and guide them to the relevant
 account settings. Do not accept secrets committed to a repository. Prefer a
@@ -287,7 +288,7 @@ All runtime configuration is provided through `.env`.
 | Variable | Description |
 |---|---|
 | `GITHUB_PAT` | GitHub PAT used for issues, comments, branches, and pull requests |
-| `GITHUB_REPOS` | Comma-separated repositories in `owner/repo` format |
+| `GITHUB_REPOS` | Optional. Comma-separated repositories in `owner/repo` format. When unset or empty, the worker watches every repository owned by `GITHUB_USERNAME` (default `oliverruoff`). |
 
 ### GitHub workflow
 

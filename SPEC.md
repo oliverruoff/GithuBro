@@ -171,19 +171,27 @@ githubro/
 All configuration is via environment variables. No config files besides
 `.env`. The container starts with `python -m app`.
 
-At startup, before scheduling the first polling tick, the worker must verify that
-the configured trigger, in-progress, and done labels exist in every repository
-from `GITHUB_REPOS`. It creates only missing labels via `gh label create` and
-preserves existing labels unchanged. Provisioning is idempotent. If a repository
-cannot be read or a missing label cannot be created, startup fails visibly rather
-than entering the polling loop with an incomplete state machine.
+At startup, before scheduling the first polling tick, the worker must resolve
+the effective repository list. When `GITHUB_REPOS` is set, that list is used
+verbatim. When `GITHUB_REPOS` is unset or empty, the worker discovers every
+repository owned by `GITHUB_USERNAME` via `gh repo list <user> --json nameWithOwner`
+and watches them all so that issues labelled with the trigger label are picked
+up regardless of which repository they live in. The resolved list is then used
+for label provisioning and polling.
+
+The worker must verify that the configured trigger, in-progress, and done labels
+exist in every resolved repository. It creates only missing labels via
+`gh label create` and preserves existing labels unchanged. Provisioning is
+idempotent. If a repository cannot be read or a missing label cannot be created,
+startup fails visibly rather than entering the polling loop with an incomplete
+state machine.
 
 ### 4.1 Required
 
 | Variable | Purpose | Example |
 |---|---|---|
 | `GITHUB_PAT` | GitHub Personal Access Token. Must have `repo` scope (read issues/comments, create branches, open/update PRs, add labels, comment). | `ghp_...` |
-| `GITHUB_REPOS` | Comma-separated list of repositories to watch. Format: `owner/repo`. Whitespace is trimmed; empty entries ignored. | `oliverruoff/pi.lot,oliverruoff/cooprpgarena` |
+| `GITHUB_REPOS` | Optional. Comma-separated list of repositories to watch. Format: `owner/repo`. Whitespace is trimmed; empty entries ignored. When unset or empty, the worker resolves every repository owned by `GITHUB_USERNAME` via `gh repo list <user> --json nameWithOwner` and watches them all. | `oliverruoff/pi.lot,oliverruoff/cooprpgarena` |
 
 ### 4.2 Strongly recommended
 
@@ -283,7 +291,7 @@ Trigger: at the next full quarter hour in local container time (`00`, `15`, `30`
 
 Steps:
 
-1. For each repo in `GITHUB_REPOS`:
+1. For each repo in the resolved repository list (the explicit `GITHUB_REPOS` entries, or the discovered user-owned repos when `GITHUB_REPOS` is empty):
    1. `gh issue list --repo <repo> --label <GITHUB_LABEL_TRIGGER> --state open --json number,title,updatedAt,labels --limit 100`
    2. For each issue, run the filter chain in §5.1.
    3. The first issue that survives filtering is **the candidate** for that repo. At most one per repo per tick.
@@ -899,7 +907,8 @@ the following scenarios all pass:
 6. **Recovery.** Manually stop the container mid-Phase-3. Restart. Within one tick, the issue is recovered (comment posted, labels reset, mode re-discriminated). The decision uses only GitHub labels/comments/PR state; no local run state is required.
 7. **Clarification.** In a Phase 3 run where the agent posts a clarification comment and exits without a PR, the issue ends up labelled `agent` again, with the clarification comment in place.
 8. **Done.** In a successful Phase 3 run, the issue ends up labelled `agent-done` with a PR link in the final comment.
-9. **Multi-repo.** Two repos in `GITHUB_REPOS` each with one candidate issue → exactly one is processed per tick; the other is processed on the next tick.
+9. **Multi-repo.** Two repos in the resolved repository list (explicit `GITHUB_REPOS` entries or, when empty, the user-owned repos discovered via `gh repo list`) each with one candidate issue → exactly one is processed per tick; the other is processed on the next tick.
+9a. **Empty `GITHUB_REPOS`.** When `GITHUB_REPOS` is unset or empty, the worker resolves every repository owned by `GITHUB_USERNAME` via `gh repo list <user> --json nameWithOwner` and watches them all. The discovery happens once at startup; the resolved list is then used uniformly for label provisioning and polling.
 10. **Runner freshness.** An issue labelled `agent-in-progress` whose latest `[githubro:runner]` activity is younger than `BRO_HEARTBEAT_STALE_AFTER_SECONDS` is **not** picked up again.
 11. **Determinism.** Given the same normalized GitHub state and configuration, candidate selection, mode selection, and existing-branch selection are deterministic. Phase 2 itself is intentionally side-effecting.
 12. **Revision mode.** Issue labelled `agent`, with an open PR, and a user comment after the last githubro activity → Phase 2 checks out the existing branch (no new branch), Phase 3 prompt includes the "User feedback since last githubro activity" section. The agent pushes additional commits to the same branch and updates the existing PR (does not open a new one). Final state: `agent-done`.
