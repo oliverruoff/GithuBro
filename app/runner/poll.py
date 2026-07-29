@@ -27,7 +27,15 @@ class Candidate:
 def poll(client: GitHubClient, config: Config) -> Candidate | None:
     candidates: list[Candidate] = []
     for repo in config.repos:
-        repo_candidate = _candidate_for_repo(client, config, repo)
+        try:
+            repo_candidate = _candidate_for_repo(client, config, repo)
+        except Exception:
+            log.warning(
+                "repository poll failed; skipping repo",
+                exc_info=True,
+                extra={"repo": repo},
+            )
+            continue
         if repo_candidate:
             candidates.append(repo_candidate)
     if not candidates:
