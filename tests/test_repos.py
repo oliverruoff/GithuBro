@@ -23,7 +23,7 @@ def test_list_user_repos_returns_sorted_unique_slugs():
     client = RepoListClient(["b/repo", "a/repo", "a/repo", "c/repo"])
     assert list_user_repos(client, "alice") == ["a/repo", "b/repo", "c/repo"]
     assert client.args == [
-        "repo", "list", "alice", "--json", "nameWithOwner,isArchived", "--limit", "100",
+        "repo", "list", "alice", "--json", "nameWithOwner,isArchived,isFork", "--limit", "100",
     ]
 
 
@@ -76,7 +76,7 @@ def test_resolve_repos_populates_empty_repos_from_user():
     assert resolved.repos == ("alice/one", "alice/two")
     assert resolved.username == "alice"
     assert client.args == [
-        "repo", "list", "alice", "--json", "nameWithOwner,isArchived", "--limit", "100",
+        "repo", "list", "alice", "--json", "nameWithOwner,isArchived,isFork", "--limit", "100",
     ]
 
 

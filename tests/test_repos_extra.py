@@ -45,7 +45,15 @@ def test_list_user_repos_excludes_archived_repos():
         {"nameWithOwner": "alice/fresh", "isArchived": False},
     ])
     assert list_user_repos(client, "alice") == ["alice/active", "alice/fresh"]
-    assert client.args == ["repo", "list", "alice", "--json", "nameWithOwner,isArchived", "--limit", "100"]
+    assert client.args == ["repo", "list", "alice", "--json", "nameWithOwner,isArchived,isFork", "--limit", "100"]
+
+
+def test_list_user_repos_excludes_forks():
+    client = RepoListClient([
+        {"nameWithOwner": "alice/source", "isArchived": False, "isFork": False},
+        {"nameWithOwner": "alice/fork", "isArchived": False, "isFork": True},
+    ])
+    assert list_user_repos(client, "alice") == ["alice/source"]
 
 
 def test_list_user_repos_treats_missing_is_archived_as_active():
