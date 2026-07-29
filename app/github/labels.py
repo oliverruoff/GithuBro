@@ -1,4 +1,10 @@
+from __future__ import annotations
+
+import logging
+
 from app.github.client import GitHubClient
+
+log = logging.getLogger(__name__)
 
 
 LABEL_STYLE = {
@@ -36,7 +42,13 @@ def ensure_workflow_labels(
     in_progress: str,
     done: str,
 ) -> dict[str, tuple[str, ...]]:
-    """Create missing state-machine labels and return what was created per repo."""
+    """Create missing state-machine labels and return what was created per repo.
+
+    Repositories that cannot be read (for example archived or inaccessible
+    repos that return HTTP 403 from ``gh``) are skipped with a warning so the
+    container does not crash-loop at startup (SPEC §9.16). Label provisioning
+    on the remaining repos still proceeds as normal.
+    """
     desired = (
         (trigger, *LABEL_STYLE["trigger"]),
         (in_progress, *LABEL_STYLE["in_progress"]),
@@ -44,7 +56,15 @@ def ensure_workflow_labels(
     )
     created: dict[str, tuple[str, ...]] = {}
     for repo in repos:
-        existing = list_names(client, repo)
+        try:
+            existing = list_names(client, repo)
+        except Exception as exc:
+            log.warning(
+                "skip label provisioning for %s: cannot read labels (%s)",
+                repo, exc,
+            )
+            created[repo] = ()
+            continue
         repo_created: list[str] = []
         for label, color, description in desired:
             if label in existing:
